@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>raft-lab</title>
+  <meta name="description" content="Break a Raft cluster in your browser and watch it recover. The real Go implementation, compiled to WebAssembly.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='12' fill='%230E7C6B'/><circle cx='16' cy='16' r='5' fill='%23E8ECF1'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Recursive:slnt,wght,CASL,MONO@-15..0,300..900,0..1,0..1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <h1>raft-lab</h1>
+      <p>Five servers agreeing on one log. Crash them, cut the network, drop packets, and watch the
+        <a href="https://raft.github.io/raft.pdf">Raft</a> algorithm keep every committed write safe.
+        This is the real Go implementation, running in your browser as WebAssembly.</p>
+    </div>
+    <a class="repo" href="https://github.com/ardazeybek-dev/raft-lab">Source on GitHub</a>
+  </header>
+
+  <main class="lab">
+    <section class="stage" aria-label="Cluster">
+      <svg id="ring" viewBox="0 0 600 600" role="img" aria-label="Cluster diagram"></svg>
+      <div class="legend" aria-hidden="true">
+        <span><i class="dot vote"></i>vote request</span>
+        <span><i class="dot app"></i>append entries</span>
+        <span><i class="dot resp"></i>response</span>
+        <span><i class="arc"></i>election timer</span>
+      </div>
+      <p id="loading" class="loading">Loading the Go runtime…</p>
+    </section>
+
+    <aside class="panel">
+      <div id="safety" class="safety ok" role="status">
+        <strong>Safety checks passing</strong>
+        <span>No two leaders in a term, no committed entry ever changed.</span>
+      </div>
+
+      <div class="clock">
+        <button id="play" class="primary" type="button">Pause</button>
+        <button id="stepBtn" type="button">Step one tick</button>
+        <label class="grow">Speed
+          <input id="speed" type="range" min="1" max="60" value="18">
+        </label>
+        <output id="tick" aria-label="Current tick">t = 0</output>
+      </div>
+
+      <form id="write" class="block">
+        <label for="cmd">Write to the leader</label>
+        <div class="row">
+          <input id="cmd" value="SET color teal" autocomplete="off" spellcheck="false">
+          <button class="primary" type="submit">Send</button>
+        </div>
+        <p id="writeMsg" class="hint">Use <code>SET key value</code> or <code>DEL key</code>. A write counts once a majority stores it.</p>
+      </form>
+
+      <div class="block" id="selected">
+        <p class="hint">Select a server in the diagram to crash it, restart it or cut it off.</p>
+      </div>
+
+      <div class="block">
+        <span class="label">Network</span>
+        <div class="row wrap">
+          <button id="split" type="button">Split network</button>
+          <button id="heal" type="button">Heal network</button>
+        </div>
+        <label class="slider">Message loss <output id="dropOut">0%</output>
+          <input id="drop" type="range" min="0" max="50" value="0">
+        </label>
+      </div>
+
+      <div class="block">
+        <span class="label">Committed state</span>
+        <dl id="kv" class="kv"></dl>
+      </div>
+
+      <details class="block">
+        <summary>New simulation</summary>
+        <div class="row wrap">
+          <label>Servers
+            <select id="size"><option>3</option><option selected>5</option><option>7</option></select>
+          </label>
+          <label>Seed <input id="seed" type="number" value="1" min="1"></label>
+          <button id="reset" type="button">Start over</button>
+        </div>
+        <p class="hint">The same seed and the same clicks replay the same run.</p>
+      </details>
+    </aside>
+
+    <section class="logs" aria-label="Replicated logs">
+      <h2>Logs</h2>
+      <p class="hint">One row per server, one cell per entry. The number is the term the entry was written in.
+        Filled cells are committed; outlined cells are stored but not yet safe.</p>
+      <div id="logGrid" class="grid"></div>
+    </section>
+
+    <section class="events" aria-label="Event history">
+      <h2>What happened</h2>
+      <ol id="events" reversed></ol>
+    </section>
+  </main>
+
+  <section class="try">
+    <h2>Things to try</h2>
+    <ol>
+      <li><button type="button" data-try="crash">Crash the leader</button> and count the ticks until a new one takes over.</li>
+      <li><button type="button" data-try="isolate">Cut the leader off</button>, then send a write. The old leader accepts it but can never commit it.</li>
+      <li><button type="button" data-try="heal">Heal the network</button>. The stale leader sees a newer term, steps down, and its orphaned entry is replaced.</li>
+      <li><button type="button" data-try="storm">Set 40% message loss</button> and keep writing. Progress slows down; safety never breaks.</li>
+    </ol>
+  </section>
+
+  <footer class="foot">
+    <p>Built by <a href="https://github.com/ardazeybek-dev">Seyid Arda Zeybek</a>. Leader election and log replication follow
+      the Raft paper; the same code passes 200 randomized fault-injection runs in CI.</p>
+  </footer>
+
+  <script src="wasm_exec.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -44,6 +44,8 @@ type MessageView struct {
 	Entries  int     `json:"entries"`
 	OK       bool    `json:"ok"`
 	Progress float64 `json:"progress"`
+	Sent     int     `json:"sent"`
+	Due      int     `json:"due"`
 }
 
 // Snapshot captures the current cluster state. At most lastEvents events are included.
@@ -54,9 +56,10 @@ func (c *Cluster) Snapshot(lastEvents int) Snapshot {
 		Committed:  len(c.committed),
 		Violations: append([]string{}, c.violations...),
 		DropRate:   c.DropRate,
+		Messages:   []MessageView{}, // JSON [] rather than null
 	}
 	for i, n := range c.nodes {
-		log := n.Log()
+		log := append([]raft.Entry{}, n.Log()...)
 		s.Nodes = append(s.Nodes, NodeView{
 			ID:          n.ID(),
 			Role:        n.Role().String(),
@@ -83,6 +86,8 @@ func (c *Cluster) Snapshot(lastEvents int) Snapshot {
 			Entries:  len(m.Entries),
 			OK:       m.Granted || m.Success,
 			Progress: float64(c.Now-e.sentAt) / span,
+			Sent:     e.sentAt,
+			Due:      e.due,
 		})
 	}
 	start := max(0, len(c.events)-lastEvents)
