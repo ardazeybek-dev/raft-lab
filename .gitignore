@@ -1,0 +1,18 @@
+# build output
+/bin/
+/dist/
+/web/*.wasm
+/web/wasm_exec.js
+*.exe
+*.test
+*.out
+coverage.*
+# env / secrets
+.env
+.env.*
+*.pem
+*.key
+# editor
+.idea/
+.vscode/
+.DS_Store
