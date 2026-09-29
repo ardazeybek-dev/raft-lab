@@ -172,6 +172,7 @@ func (c *Cluster) Restart(id int) {
 	}
 	c.down[id-1] = false
 	c.nodes[id-1].Restart()
+	c.roles[id-1] = raft.Follower
 	c.logf("heal", "node %d restarted (term %d, %d log entries kept)", id, c.nodes[id-1].Term(), c.nodes[id-1].LastIndex())
 }
 
@@ -247,6 +248,10 @@ func (c *Cluster) observe() {
 			continue
 		}
 		switch n.Role() {
+		case raft.Follower:
+			if prev == raft.Leader {
+				c.logf("heal", "node %d steps down: it saw term %d, newer than its own", n.ID(), n.Term())
+			}
 		case raft.Candidate:
 			c.logf("election", "node %d timed out, starts election for term %d", n.ID(), n.Term())
 		case raft.Leader:
