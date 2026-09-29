@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  push:
+    branches: [main, arda]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+      - name: Format
+        run: test -z "$(gofmt -l .)"
+      - name: Vet
+        run: go vet ./... && GOOS=js GOARCH=wasm go vet ./cmd/wasm
+      - name: Test
+        run: go test -race ./...
+      - name: Chaos (500 seeds)
+        run: go run ./cmd/raft-lab -chaos -seeds 500 -drop 0.2
+      - name: Build WebAssembly
+        run: GOOS=js GOARCH=wasm go build -o web/raft.wasm ./cmd/wasm
